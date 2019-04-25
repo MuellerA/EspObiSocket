@@ -2,7 +2,9 @@
 
 # emacs
 *~
-source/Clock/data/*
+
+# files
+source/EspObiSocket/data/*
 source/*.pem
 source/*.der
 

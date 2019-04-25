@@ -2,8 +2,21 @@
 // Settings
 ////////////////////////////////////////////////////////////////////////////////
 
-#define SettingsMagic    "WiFi Socket Settings V0.1"
+#define SettingsMagic    "WiFi Socket Settings V0.2"
 #define SettingsFileName "/wifi-socket.settings"
+
+bool Settings::State::operator<(const State &that) const
+{
+  if (this->_enable    < that._enable   ) return false ; // enableder
+  if (this->_enable    > that._enable   ) return true  ;
+  if (this->_daySecond < that._daySecond) return true  ; // earlier
+  if (this->_daySecond > that._daySecond) return false ;
+  if (this->_weekDay   < that._weekDay  ) return false ; // mondayer
+  if (this->_weekDay   > that._weekDay  ) return true  ;
+  if (this->_state     < that._state    ) return false ; // onner
+  if (this->_state     > that._state    ) return true  ;
+  return false ;
+}
 
 String fileRead(File &cfg)
 {
@@ -16,8 +29,10 @@ void Settings::load()
 {
   Serial.print("Settings::load: ") ;
 
-  _apSsid = "WiFiSocket" ;
-  _apPsk  = HostName ;
+  char ssid[32] ;
+  sprintf(ssid, "WifiSocket-%06x", ESP.getChipId()) ;
+  _apSsid = ssid ;
+  _apPsk  = PASSWORD ;
   _apChan = 8 ;
 
   String str ;
@@ -34,25 +49,43 @@ void Settings::load()
   if (str == SettingsMagic)
   {
     Serial.println("magic match") ;
+
+    _apSsid = fileRead(cfg) ;
+    ascIntToBin(fileRead(cfg), _apChan, (uint8_t)1, (uint8_t)14) ;
     
     _ssid = fileRead(cfg) ;
     _psk  = fileRead(cfg) ;
     _ntp  = fileRead(cfg) ;
-
+ 
     uint8_t tmp ;
-    ascInt2bin(fileRead(cfg), tmp         ) ; _tzDstMonth = (TZ::Month)tmp ;
-    ascInt2bin(fileRead(cfg), tmp         ) ; _tzDstWeek  = (TZ::Week) tmp ;
-    ascInt2bin(fileRead(cfg), tmp         ) ; _tzDstDay   = (TZ::Day)  tmp ;
-    ascInt2bin(fileRead(cfg), _tzDstHour  ) ;
-    ascInt2bin(fileRead(cfg), _tzDstOffset) ;
-    ascInt2bin(fileRead(cfg), tmp         ) ; _tzStdMonth = (TZ::Month)tmp ;
-    ascInt2bin(fileRead(cfg), tmp         ) ; _tzStdWeek  = (TZ::Week) tmp ;
-    ascInt2bin(fileRead(cfg), tmp         ) ; _tzStdDay   = (TZ::Day)  tmp ;
-    ascInt2bin(fileRead(cfg), _tzStdHour  ) ;
-    ascInt2bin(fileRead(cfg), _tzStdOffset) ;
+    ascIntToBin(fileRead(cfg), tmp         ) ; _tzDstMonth = (TZ::Month)tmp ;
+    ascIntToBin(fileRead(cfg), tmp         ) ; _tzDstWeek  = (TZ::Week) tmp ;
+    ascIntToBin(fileRead(cfg), tmp         ) ; _tzDstDay   = (TZ::Day)  tmp ;
+    ascIntToBin(fileRead(cfg), _tzDstHour  ) ;
+    ascIntToBin(fileRead(cfg), _tzDstOffset) ;
+    ascIntToBin(fileRead(cfg), tmp         ) ; _tzStdMonth = (TZ::Month)tmp ;
+    ascIntToBin(fileRead(cfg), tmp         ) ; _tzStdWeek  = (TZ::Week) tmp ;
+    ascIntToBin(fileRead(cfg), tmp         ) ; _tzStdDay   = (TZ::Day)  tmp ;
+    ascIntToBin(fileRead(cfg), _tzStdHour  ) ;
+    ascIntToBin(fileRead(cfg), _tzStdOffset) ;
 
-    ascInt2bin(fileRead(cfg), tmp) ; _lang = (Lang)tmp ;
+    ascIntToBin(fileRead(cfg), tmp) ; _lang = (Settings::Lang)tmp ;
 
+    uint32_t stateNum ;
+    ascIntToBin(fileRead(cfg), stateNum) ;
+    _stateNum = stateNum < _stateMax ? stateNum : _stateMax ;
+
+    for (uint8_t i = 0 ; i < stateNum ; ++i)
+    {
+      uint8_t tmp2 ;
+      State dummy ;
+      State &state = (i < _stateMax) ? _states[i] : dummy ;
+      ascIntToBin(fileRead(cfg), tmp2) ; state._enable = (bool) tmp2 ;
+      ascIntToBin(fileRead(cfg), state._weekDay) ;
+      ascIntToBin(fileRead(cfg), state._daySecond) ;
+      ascIntToBin(fileRead(cfg), tmp2) ; state._state = (Relay::State) tmp2 ;
+    }
+    
     // magic aendern!
 
     tz.resetRules() ;
@@ -82,6 +115,9 @@ void Settings::save() const
     return ;
 
   cfg.println(SettingsMagic) ;
+
+  cfg.println(_apSsid) ;
+  cfg.println(_apChan) ;
   
   cfg.println(_ssid) ;
   cfg.println(_psk) ;
@@ -100,6 +136,16 @@ void Settings::save() const
 
   cfg.println((uint8_t)_lang) ;
 
+  cfg.println(_stateNum) ;
+  for (uint8_t i = 0 ; i < _stateNum ; ++i)
+  {
+    const State &state = _states[i] ;
+    cfg.println((uint8_t)state._enable        ) ;
+    cfg.println(         state._weekDay       ) ;
+    cfg.println(         state._daySecond     ) ;
+    cfg.println((uint8_t)state._state         ) ;
+  }
+  
   // magic aendern!
   
   cfg.close() ;

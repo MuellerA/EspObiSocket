@@ -2,19 +2,75 @@
 // Http
 ////////////////////////////////////////////////////////////////////////////////
 
+#if (HTTPS == HTTPS_axTLS) || (HTTPS == HTTPS_BearSSL)
+
+static const uint8_t GenericCert[] PROGMEM =
+{
+#include "https-cert.h"
+};
+static char*    CustomCertFileName = "/cert.der" ;
+static int      CustomCertLen      = 0 ;
+static uint8_t* CustomCert         = nullptr ;
+
+static const uint8_t GenericKey[]  PROGMEM =
+{
+#include "https-key.h"
+} ;
+
+static char*    CustomKeyFileName  = "/key.der"  ;
+static int      CustomKeyLen       = 0 ;
+static uint8_t* CustomKey          = nullptr ;
+#endif
+
+////////////////////////////////////////////////////////////////////////////////
+
 void HttpSetup()
 {
-  httpServer.on("/", httpOnHome) ;
-  httpServer.on("/settings.html", httpOnSettings) ;
+#if (HTTPS == HTTPS_axTLS) || (HTTPS == HTTPS_BearSSL)
+  bool customCert = false ;
+
+  if (SPIFFS.exists(CustomCertFileName) && SPIFFS.exists(CustomKeyFileName))
+  {
+    File certFile = SPIFFS.open(CustomCertFileName, "r") ;
+    File keyFile  = SPIFFS.open(CustomKeyFileName , "r") ;
+    if (certFile && keyFile)
+    {
+      CustomCertLen = certFile.size() ;
+      CustomCert = (uint8_t*) malloc(CustomCertLen) ;
+      certFile.read(CustomCert, CustomCertLen) ;
+      certFile.close() ;
+
+      CustomKeyLen = keyFile.size() ;
+      CustomKey = (uint8_t*) malloc(CustomKeyLen) ;
+      keyFile.read(CustomKey, CustomKeyLen) ;
+      keyFile.close() ;
+
+      httpServer.setServerKeyAndCert(CustomKey, CustomKeyLen, CustomCert, CustomCertLen) ;
+      customCert = true ;
+    }
+
+    if (!customCert)
+      Serial.println("cannot read custom https credentials") ;
+  }
+
+  if (!customCert) // no SPIFS cert or empty files
+  {
+    Serial.println("using generic https credentials") ;
+    httpServer.setServerKeyAndCert_P(GenericKey, sizeof(GenericKey), GenericCert, sizeof(GenericCert)) ;
+  }
+#endif
+  
+  httpServer.on("/"               , httpOnHome) ;
+  httpServer.on("/settings.html"  , httpOnSettings) ;
   httpServer.on("/wifi-socket.css", httpOnCss) ;
-  httpServer.on("/reboot", httpOnReboot) ;
-  httpServer.on("/on", httpOnOn) ;
-  httpServer.on("/off", httpOnOff) ;
-  httpServer.on("/toggle", httpOnToggle) ;
-  httpServer.on("/set", httpOnSet) ;
+  httpServer.on("/reboot"         , httpOnReboot) ;
+  httpServer.on("/on"             , httpOnOn) ;
+  httpServer.on("/off"            , httpOnOff) ;
+  httpServer.on("/time"           , httpOnTime) ;
+  httpServer.on("/set"            , httpOnSet) ;
   
   httpUpdater.setup(&httpServer, "/update", settings._apSsid.c_str(), settings._apPsk.c_str());
-  
+
   httpServer.begin() ;
 }
 
@@ -59,7 +115,7 @@ private:
 
 struct Translate
 {
-  String _lang[(unsigned int)Lang::Size] ;
+  String _lang[(unsigned int)Settings::Lang::Size] ;
   const String& operator()() const { return _lang[(unsigned int)settings._lang] ; }
   bool operator==(const String &cmp)
   {
@@ -109,9 +165,7 @@ static const std::map<String, Translate> TranslateWord
   { "Switch On/Off"       , { "Switch On/Off"       , "Ein-/Ausschalten"    } },
   { "Off"                 , { "Off"                 , "Aus"                 } },
   { "On"                  , { "On"                  , "Ein"                 } },
-  { "Toggle"              , { "Toggle"              , "Umschalten"          } },
-  { "Automatic"           , { "Automatic"           , "Automatisch"         } },
-  { "Socket"              , { "Socket"              , "Steckdose"           } },
+  { "Time Controlled"     , { "Time Controlled"     , "Zeitgesteuert"       } },
   { "Home"                , { "Home"                , "Startseite"          } },
   { "Settings"            , { "Settings"            , "Einstellungen"       } },
   { "Update"              , { "Update"              , "Aktualisieren"       } },
@@ -137,7 +191,15 @@ static const std::map<String, Translate> TranslateWord
   { "Day"                 , { "Day"                 , "Tag"                 } },
   { "Hour"                , { "Hour"                , "Stunde"              } },
   { "Offset to UTC (min)" , { "Offset to UTC (min)" , "Abstand zu UTC (Min)"} },
-
+  { "Enable"              , { "Enable"              , "Aktiv"               } },
+  { "Rules"               , { "Rules"               , "Regeln"              } },
+  { "Mon"                 , { "Mon"                 , "Mo"                  } },
+  { "Tue"                 , { "Tue"                 , "Di"                  } },
+  { "Wed"                 , { "Wed"                 , "Mi"                  } },
+  { "Thu"                 , { "Thu"                 , "Do"                  } },
+  { "Fri"                 , { "Fri"                 , "Fr"                  } },
+  { "Sat"                 , { "Sat"                 , "Sa"                  } },
+  { "Sun"                 , { "Sun"                 , "So"                  } },
     
   { transJanuary  ._lang[0], transJanuary   },
   { transFebruary ._lang[0], transFebruary  },
@@ -167,9 +229,10 @@ static const std::map<String, Translate> TranslateWord
   { transLast     ._lang[0], transLast      },
 } ;
 
+
 static const std::map<String,std::function<String()> > TranslateFunc
 {
-  { "@NtpManual"   , [](){ return ntp.isNtp() ? "NTP" : translate("manual") ; } },
+  { "@Name"        , [](){ return settings._apSsid ; } },
   { "@NtpManual"   , [](){ return ntp.isNtp() ? "NTP" : translate("manual") ; } },
   { "@NtpTime"     , [](){ return ntp.toLocalString() ; } },
   { "@LastSync"    , [](){ return ntp.lastSyncToString() ; } },
@@ -185,6 +248,8 @@ static const std::map<String,std::function<String()> > TranslateFunc
   { "@StdDay"      , [](){ return inputDay  ("tzStdDay"   , settings._tzStdDay   ) ; } },
   { "@StdHour"     , [](){ return inputInt  ("tzStdHour"  , settings._tzStdHour  , (uint8_t)   0, (uint8_t) 23) ; } },
   { "@StdOffset"   , [](){ return inputInt  ("tzStdOffset", settings._tzStdOffset, (int16_t)-840, (int16_t)840) ; } },
+  { "@AutoNum"     , [](){ return inputInt  ("autoNum"    , settings._stateNum   , (uint8_t)   0, settings._stateMax) ; } },
+  { "@AutoOnOff"   , autoOnOff },
 } ;
 
 String translate(const String &orig)
@@ -300,11 +365,11 @@ const char HttpHeader_P[] PROGMEM =
  <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>%WiFi% %Socket% - %Page%</title>
+  <title>%@Name% - %Page%</title>
   <link rel="stylesheet" href="/wifi-socket.css"/>
  </head>
  <body>
-  <h1>%WiFi% %Socket% - %Page%</h1>)" ;
+  <h1>%@Name% - %Page%</h1>)" ;
 
 const char HttpFooter_P[] PROGMEM =
   R"( </body>
@@ -317,7 +382,7 @@ const char HttpHome_P[] PROGMEM =
 <form action="/set" method="post">
   <button class="button" type="submit" name="action" value="on">%On%</button>
   <button class="button" type="submit" name="action" value="off">%Off%</button>
-  <button class="button" type="submit" name="action" value="toggle">%Toggle%</button>
+  <button class="button" type="submit" name="action" value="time">%Time Controlled%</button>
 </form>
 
 <p><span style="font-size: 66%%">%@NtpTime% - %#LastSync%</span></p>
@@ -350,10 +415,10 @@ const char HttpReboot_P[] PROGMEM =
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <meta http-equiv="refresh" content="10;URL=/"/>
-  <title>%WiFi% %Socket% - %Page%</title>
+  <title>%@Name% - %Page%</title>
  </head>
  <body>
-  <h1>%WiFi% %Socket% - %Page%</h1>
+  <h1>%@Name% - %Page%</h1>
   <p>%Reboot%...</p>
  </body>
 </html>)" ;
@@ -372,12 +437,31 @@ const char HttpSettings_P[] PROGMEM =
   </form>
 </div>
 
+<!-- Name -->
+<div class="border">
+  <h2>Name</h2>
+  <form action="settings.html" method="post">
+    <input type="text" name="apSsid" size="32" value="%@Name%"/>
+    <button type="submit" name="action" value="ap">%Save Name%</button>
+  </form>
+</div>
+
 <!-- Switch On/Off -->
 <div class="border">
   <h2>%Switch On/Off%</h2>
   <form action="settings.html" method="post">
     <button type="submit" name="action" value="on">%On%</button>
     <button type="submit" name="action" value="off">%Off%</button>
+    <button type="submit" name="action" value="time">%Time Controlled%</button>
+  </form>
+  <hr/>
+  <form action="settings.html" method="post">
+    <p>%Rules%: %@AutoNum%</p>
+    <table stype="border-width: 1px; border-style: solid; border-color: black;">
+      <tr><th>%Enable%</th><th>%Mon%</th><th>%Tue%</th><th>%Wed%</th><th>%Thu%</th><th>%Fri%</th><th>%Sat%</th><th>%Sun%</th><th>%Time%</th><th>%Action%</th></tr>
+      %@AutoOnOff%
+    </table>
+    <button type="submit" name="action" value="auto">%Save On/Off%</button>
   </form>
 </div>
 
@@ -470,6 +554,7 @@ void httpOnOn()
 {
   httpServer.sendHeader("location", "/") ;
   httpServer.send(302);
+  settings._mode = Settings::Mode::On ;
   relay.on() ;
 }
 
@@ -477,14 +562,15 @@ void httpOnOff()
 {
   httpServer.sendHeader("location", "/") ;
   httpServer.send(302);
+  settings._mode = Settings::Mode::Off ;
   relay.off() ;
 }
 
-void httpOnToggle()
+void httpOnTime()
 {
   httpServer.sendHeader("location", "/") ;
   httpServer.send(302);
-  relay.toggle() ;
+  settings._mode = Settings::Mode::Time ;
 }
 
 void httpOnSet()
@@ -493,9 +579,9 @@ void httpOnSet()
   {
     String action = httpServer.arg("action") ;
 
-    if      (action == "on"    ) relay.on()     ;
-    else if (action == "off"   ) relay.off()    ;
-    else if (action == "toggle") relay.toggle() ;
+    if      (action == "on"  ) { settings._mode = Settings::Mode::On   ; relay.on()  ; }
+    else if (action == "off" ) { settings._mode = Settings::Mode::Off  ; relay.off() ; }
+    else if (action == "time") { settings._mode = Settings::Mode::Time ;               }
   }
 
   httpServer.sendHeader("location", "/") ;
@@ -613,6 +699,67 @@ String inputInt(const char *name, T val, T min, T max)
     String("\">") ;
 }
 
+String inputCheckBox(const String &name, const String &value, bool checked)
+{
+  String s ;
+  s += "<input type=\"checkbox\" name=\"" ;
+  s += name ;
+  s += "\" value=\"" ;
+  s += value ;
+  s += checked ? "\" checked>" : "\">" ;
+
+  return s ;
+}
+
+String autoOnOffWd(const String &idx, const char *wd, bool checked)
+{
+  return String("<td>") + inputCheckBox(String("autoWd") + idx + wd, wd, checked) + String("</td>") ;
+}
+
+String autoOnOff()
+{
+  String s ;
+
+  for (uint8_t i = 0 ; i < settings._stateNum ; ++i)
+  {
+    String idx { i } ;
+
+    const Settings::State &state = settings._states[i] ;
+
+    char buff[16] ;
+    sprintf(buff, "%02d:%02d:%02d", state._daySecond/(60*60), state._daySecond/60%60, state._daySecond%60) ;
+    
+    s += "<tr>" ;
+    s += "<td>" ;
+    s += inputCheckBox(String("autoEa") + idx, "enable", state._enable) ;
+    s += "</td>" ;
+    s += autoOnOffWd(idx, "Mon", state._weekDay & 0x80) ;
+    s += autoOnOffWd(idx, "Tue", state._weekDay & 0x40) ;
+    s += autoOnOffWd(idx, "Wed", state._weekDay & 0x20) ;
+    s += autoOnOffWd(idx, "Thu", state._weekDay & 0x10) ;
+    s += autoOnOffWd(idx, "Fri", state._weekDay & 0x08) ;
+    s += autoOnOffWd(idx, "Sat", state._weekDay & 0x04) ;
+    s += autoOnOffWd(idx, "Sun", state._weekDay & 0x02) ;
+    s += "<td>" ;
+    s += "<input type=\"time\" name=\"autoDt" ;
+    s += idx ;
+    s += "\" step=\"1\" value=\"" ;
+    s += buff ;
+    s += "\"/>" ;
+    s += "</td>" ;
+    s += "<td>" ;
+    s += "<select size=\"1\" name=\"autoSt" ;
+    s += idx ;
+    s += "\">" ;
+    s += inputOption("On" , state._state, Relay::State::On ) ;
+    s += inputOption("Off", state._state, Relay::State::Off) ;
+    s += "</select>" ;
+    s += "</td>" ;
+    s += "</tr>" ;
+  }
+  return s ;
+}
+
 void httpOnSettings()
 {
   if (httpServer.hasArg("action"))
@@ -625,21 +772,89 @@ void httpOnSettings()
 
     if (action == "deutsch")
     {
-      settings._lang = Lang::DE ;
+      settings._lang = Settings::Lang::DE ;
       settingsDirty = true ;
     }
     else if (action == "english")
     {
-      settings._lang = Lang::EN ;
+      settings._lang = Settings::Lang::EN ;
       settingsDirty = true ;
+    }
+    else if (action == "ap")
+    {
+      String ssid = httpServer.arg("apSsid") ;
+      if ((3 <= ssid.length()) && (ssid.length() <= 32))
+      {
+        settings._apSsid = httpServer.arg("apSsid") ;
+        settingsDirty = true ;
+      }
     }
     else if (action == "on")
     {
+      settings._mode = Settings::Mode::On ;
       relay.on() ;
     }
     else if (action == "off")
     {
+      settings._mode = Settings::Mode::Off ;
       relay.off() ;
+    }
+    else if (action == "time")
+    {
+      settings._mode = Settings::Mode::Time ;
+    }
+    else if (action == "auto")
+    {
+      for (uint8_t i = 0 ; i < settings._stateNum ; ++i)
+      {
+        Settings::State &state = settings._states[i] ;
+        String idx { i } ;
+
+        state._enable = httpServer.arg(String("autoEa") + idx) == "enable" ;
+        state._weekDay  = 0x00 ;
+        if (httpServer.arg(String("autoWd") + idx + "Mon") == "Mon")
+          state._weekDay |= 0x80 ;
+        if (httpServer.arg(String("autoWd") + idx + "Tue") == "Tue")
+          state._weekDay |= 0x40 ;
+        if (httpServer.arg(String("autoWd") + idx + "Wed") == "Wed")
+          state._weekDay |= 0x20 ;
+        if (httpServer.arg(String("autoWd") + idx + "Thu") == "Thu")
+          state._weekDay |= 0x10 ;
+        if (httpServer.arg(String("autoWd") + idx + "Fri") == "Fri")
+          state._weekDay |= 0x08 ;
+        if (httpServer.arg(String("autoWd") + idx + "Sat") == "Sat")
+          state._weekDay |= 0x04 ;
+        if (httpServer.arg(String("autoWd") + idx + "Sun") == "Sun")
+          state._weekDay |= 0x02 ;
+
+        String dt = httpServer.arg(String("autoDt") + idx) ;
+        uint8_t mL, mH, hL, hH, sL, sH ;
+        if ((dt.length() == 8) &&
+            (dt[2] == ':') &&
+            (dt[5] == ':') &&
+            (ascDecToBin(dt[0], hH)) &&
+            (ascDecToBin(dt[1], hL)) &&
+            (ascDecToBin(dt[3], mH)) &&
+            (ascDecToBin(dt[4], mL)) &&
+            (ascDecToBin(dt[6], sH)) &&
+            (ascDecToBin(dt[7], sL)))
+        {
+          uint32_t h = (uint32_t)hH * 10 + (uint32_t)hL ;
+          uint32_t m = (uint32_t)mH * 10 + (uint32_t)mL ;
+          uint32_t s = (uint32_t)sH * 10 + (uint32_t)sL ;
+          if ((h < 24) && (m < 60) && (s < 60))
+            state._daySecond = h*60*60 + m*60 + s ;
+        }
+
+        state._state = (httpServer.arg(String("autoSt") + idx) == "On") ? Relay::State::On : Relay::State::Off ;
+      }
+      uint8_t numOld = settings._stateNum ;
+      ascIntToBin(httpServer.arg("autoNum"), settings._stateNum, (uint8_t)0, settings._stateMax) ;
+      for (uint8_t i = numOld ; i < settings._stateNum ; ++i)
+        settings._states[i]._enable = false ;
+                  
+      std::sort(settings._states, settings._states + settings._stateNum) ;
+      settingsDirty = true ;
     }
     else if (action == "wifi")
     {
@@ -698,13 +913,13 @@ void httpOnSettings()
       if (httpOnSettings_Month(tzDstMonth , dstMonth ) &&
           httpOnSettings_Week (tzDstWeek  , dstWeek  ) &&
           httpOnSettings_Day  (tzDstDay   , dstDay   ) &&
-          ascInt2bin          (tzDstHour  , dstHour  , (uint8_t)0   , (uint8_t) 23) &&
-          ascInt2bin          (tzDstOffset, dstOffset, (int16_t)-840, (int16_t)840) &&
+          ascIntToBin          (tzDstHour  , dstHour  , (uint8_t)0   , (uint8_t) 23) &&
+          ascIntToBin          (tzDstOffset, dstOffset, (int16_t)-840, (int16_t)840) &&
           httpOnSettings_Month(tzStdMonth , stdMonth ) &&
           httpOnSettings_Week (tzStdWeek  , stdWeek  ) &&
           httpOnSettings_Day  (tzStdDay   , stdDay   ) &&
-          ascInt2bin          (tzStdHour  , stdHour  , (uint8_t)0   , (uint8_t) 23) &&
-          ascInt2bin          (tzStdOffset, stdOffset, (int16_t)-840, (int16_t)840))
+          ascIntToBin          (tzStdHour  , stdHour  , (uint8_t)0   , (uint8_t) 23) &&
+          ascIntToBin          (tzStdOffset, stdOffset, (int16_t)-840, (int16_t)840))
       {
         settings._tzDstMonth  = dstMonth  ;
         settings._tzDstWeek   = dstWeek   ;
@@ -724,7 +939,6 @@ void httpOnSettings()
         settingsDirty = true ;
         ntpDirty = true ;
       }
-
     }
 
     if (settingsDirty)

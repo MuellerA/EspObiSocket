@@ -10,34 +10,49 @@
 
 <h2>Used Libraries</h2>
 <ul>
-  <li><a href="https://github.com/esp8266/Arduino">Arduino Core for ESP8266</a></li>
+  <li>Arduino 1.8.9</li>
+  <li><a href="https://github.com/esp8266/Arduino">Arduino Core for ESP8266 2.5.0</a></li>
 </ul>
 
 <h2>Setup</h2>
 <ol>
-  <li>Open the Arduino IDE and load the Clock.ino sketch</li>
-  <li>In the Tools menu set the "Flash size" to use SPIFS</li>
+  <li>Open the Arduino IDE</li>
+  <li>Install the required libraries</li>
+  <li>Check the <a href="source/ArduinoSettings.png">Board Settings</a></li>
+  <li>Modify the password.h file, the password is used in AP mode and as OTA update password</li>
+  <li>Load the Clock.ino sketch</li>
   <li>Flash the ESP8266 using Arduino IDE</li>
-  <li>
-    Connect the NodeMCU with the buck converter, WS2812 LEDs and the photo resistor:<br/>
-    <img src="images/Clock.sch.png" width="600" alt="schematic"/><br/>
-  </li>
 </ol>
 
 <h2>First Start</h2>
 <ul>
   <li>Open the Serial Monitor in Arduino IDE</li>
-  <li>Power on / reset the Clock</li>
-  <li>Connect to Network with SSID = "Clock" and PSK as shown in the Serial Monitor (e.g. "clock-123456")</li>
-  <li>Open the web page "https://192.168.4.1"</li>
+  <li>Power on / reset the Wifi Socket</li>
+  <li>Connect to Network with SSID = "WifiSocket-xxxxxx" and PSK you defined above</li>
+  <li>Open the web page "http://192.168.4.1" (or sometimes 192.168.244.1)</li>
   <li>On the Settings page enter your WiFi credentials (SSID and PSK) and press "save"</li>
-  <li>The clock will now connect to the network, fetch the current time and display it</li>
-  <li>At next power on the clock will remember the settings</li>
+  <li>The Wifi Socket will now connect to the network</li>
+  <li>At next power on the Wifi Socket will remember the settings</li>
 </ul>
-  
+
+<h2>Attaching the Wifi Socket to the grid</h2>
+<p>The Wifi Socket always start in "Off" position.</p>
+
+<h2>Using the hardware buttons</h2>
+<p>Reset - Restart the Wifi Socket</p>
+<p>On/Off - Rotate from OFF to "Time Controlled" to ON</p>
+
+<h2>LEDs</h2>
+<ul>
+  <li>Red ON: Socket has power</li>
+  <li>Red OFF: Socket has no power</li>
+  <li>Green OFF: manual mode</li>
+  <li>Green ON: Time Controlled mode</li>
+  <li>Green blink: Time Controlled mode ERROR</li>
+</ul>
+
+
 <h2>UI Screenshots</h2>
 <p>
-<a style="vertical-align: top" href="images/home.png"    ><img src="images/home.png"     alt="home"     width="250" border="1px"/></a>
-<a style="vertical-align: top" href="images/settings.png"><img src="images/settings.png" alt="settings" width="250" border="1px"/></a>
-<a style="vertical-align: top" href="images/update.png"  ><img src="images/update.png"   alt="update"   width="250" border="1px"/></a>
+  ...
 </p>

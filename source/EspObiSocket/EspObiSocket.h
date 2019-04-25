@@ -2,8 +2,6 @@
 // EspObiSocket.h
 ////////////////////////////////////////////////////////////////////////////////
 
-extern char HostName[] ;
-
 extern const uint8_t IoBtnOnOff ;
 extern const uint8_t IoLedGreen ;
 extern const uint8_t IoLedRed ;
@@ -29,7 +27,6 @@ class Relay
 
   State on() ;
   State off() ;
-  State toggle() ;
   State set(State state) ;
   State get() const ;
   
@@ -41,21 +38,31 @@ private:
 
 ////////////////////////////////////////////////////////////////////////////////
 
-enum class Lang
-{
-  EN,
-  DE,
-  Size // last
-} ;
-
-enum class State
-{
-  Off,
-  On,
-} ;
-
 struct Settings
 {
+  enum class Lang
+  {
+    EN,
+    DE,
+    Size // last
+  } ;
+
+  enum class Mode
+  {
+    On,
+    Off,
+    Time,
+  } ;
+  struct State
+  {
+    bool operator<(const State &that) const ;
+    
+    bool         _enable    { false } ;
+    uint8_t      _weekDay   { 0x00  } ; // mask Mon=0x80 ... Sun=0x02
+    uint32_t     _daySecond { 0     } ;
+    Relay::State _state     { Relay::State::Off } ;
+  } ;
+  
   Settings() = default ;
   Settings(const Settings &) = delete ;
   Settings& operator=(const Settings &) = delete ;
@@ -67,9 +74,9 @@ struct Settings
   Lang _lang { Lang::DE } ;
 
   // Wifi Access Point
-  String _apSsid ;
-  String _apPsk  ;
-  int    _apChan ;
+  String  _apSsid ;
+  String  _apPsk  ;
+  uint8_t _apChan ;
 
   // Wifi Station
   String _ssid ;
@@ -88,6 +95,10 @@ struct Settings
   uint8_t   _tzStdHour   {               3 } ;
   int16_t   _tzStdOffset {              60 } ;
 
+  Mode _mode { Mode::Off } ;
+  static const uint8_t _stateMax { 20 } ;
+  uint8_t _stateNum { 0 } ;
+  State _states[_stateMax] ;
 } ;
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -149,26 +160,26 @@ private:
   bool fromLocalString1(const String &s, uint8_t offset, uint8_t &v) const ;
 
 private:
-  static const int _delayWait    =      15 * 1000 ; // 15 sec
-  static const int _delaySuccess = 30 * 60 * 1000 ; // 30 min
+  static const int _delayWait    {      15 * 1000 } ; // 15 sec
+  static const int _delaySuccess { 30 * 60 * 1000 } ; // 30 min
   
-  static const int _delayWarnSyncNtp    =       6 * 60 * 60 ; // 3 hour
-  static const int _delayWarnSyncManual =  7 * 24 * 60 * 60 ; // 1 week
+  static const int _delayWarnSyncNtp    {       6 * 60 * 60 } ; // 3 hour
+  static const int _delayWarnSyncManual {  7 * 24 * 60 * 60 } ; // 1 week
   
   NtpData _txData ;
   NtpData _rxData ;
 
-  State    _state       = State::off ;
-  bool     _valid       = false ;
-  bool     _next59      = false ;
-  bool     _next61      = false ;
-  uint32_t _lastInc     = 0 ;     // last millis when inc'ed current time
-  uint32_t _lastRequest = 0 ;     // millis of last request
-  uint64_t _tsReceived  = 0 ;     // last received ntp time
-  uint64_t _tsTransmit  = 0 ;     // last tx timestamp
-  bool     _isNtp       = false ; // NTP vs manual setting (== utc time vs local time)
-  uint64_t _current     = 0 ;     // current utc or local time
-  uint64_t _lastSync    = 0 ;     // last sync (ntp or manual)
+  State    _state       { State::off } ;
+  bool     _valid       { false } ;
+  bool     _next59      { false } ;
+  bool     _next61      { false } ;
+  uint32_t _lastInc     { 0 } ;     // last millis when inc'ed current time
+  uint32_t _lastRequest { 0 } ;     // millis of last request
+  uint64_t _tsReceived  { 0 } ;     // last received ntp time
+  uint64_t _tsTransmit  { 0 } ;     // last tx timestamp
+  bool     _isNtp       { false } ; // NTP vs manual setting (== utc time vs local time)
+  uint64_t _current     { 0 } ;     // current utc or local time
+  uint64_t _lastSync    { 0 } ;     // last sync (ntp or manual)
   
 } ;
 
