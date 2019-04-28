@@ -30,7 +30,7 @@ void Settings::load()
   Serial.print("Settings::load: ") ;
 
   char ssid[32] ;
-  sprintf(ssid, "WifiSocket-%06x", ESP.getChipId()) ;
+  sprintf(ssid, "WiFiSocket-%06x", ESP.getChipId()) ;
   _apSsid = ssid ;
   _apPsk  = PASSWORD ;
   _apChan = 8 ;

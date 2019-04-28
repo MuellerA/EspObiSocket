@@ -69,7 +69,7 @@ void HttpSetup()
   httpServer.on("/time"           , httpOnTime) ;
   httpServer.on("/set"            , httpOnSet) ;
   
-  httpUpdater.setup(&httpServer, "/update", settings._apSsid.c_str(), settings._apPsk.c_str());
+  httpUpdater.setup(&httpServer, "/update", settings._apSsid, settings._apPsk);
 
   httpServer.begin() ;
 }
@@ -160,47 +160,58 @@ Translate transThird     { "Third"    , "Dritter"   } ;
 Translate transFourth    { "Fourth"   , "Vierter"   } ;
 Translate transLast      { "Last"     , "Letzter"   } ;
 
-static const std::map<String, Translate> TranslateWord
+Translate transOn        { "On"       , "Ein"       } ;
+Translate transOff       { "Off"      , "Aus"       } ;
+
+static const std::map<String, Translate> TranslateWord1
 {
-  { "Switch On/Off"       , { "Switch On/Off"       , "Ein-/Ausschalten"    } },
-  { "Off"                 , { "Off"                 , "Aus"                 } },
-  { "On"                  , { "On"                  , "Ein"                 } },
-  { "Time Controlled"     , { "Time Controlled"     , "Zeitgesteuert"       } },
-  { "Home"                , { "Home"                , "Startseite"          } },
-  { "Settings"            , { "Settings"            , "Einstellungen"       } },
-  { "Update"              , { "Update"              , "Aktualisieren"       } },
-  { "Reboot"              , { "Reboot"              , "Neustart"            } },
-  { "manual"              , { "manual"              , "manuell"             } },
-  { "Save On/Off"         , { "Save On/Off"         , "Automatik speichern" } },
-  { "Save WiFi"           , { "Save WiFi"           , "WLAN speichern"      } },
-  { "Save Time"           , { "Save Time"           , "Zeit speichern"      } },
-  { "Save NTP"            , { "Save NTP"            , "NTP speichern"       } },
+  { "Switch On/Off"       , { "Switch On/Off"       , "Ein-/Ausschalten"       } },
+  { "Time Controlled"     , { "Time Controlled"     , "Zeitgesteuert"          } },
+  { "Home"                , { "Home"                , "Startseite"             } },
+  { "Settings"            , { "Settings"            , "Einstellungen"          } },
+  { "Upload Firmware"     , { "Upload Firmware"     , "Firmware hochladen"     } },
+  { "Update"              , { "Update"              , "Aktualisieren"          } },
+  { "Source Code"         , { "Source Code"         , "Quellcode"              } },
+  { "Reboot"              , { "Reboot"              , "Neustart"               } },
+  { "manual"              , { "manual"              , "manuell"                } },
+  { "Save Name"           , { "Save Name"           , "Name speichern"         } },
+  { "Save On/Off"         , { "Save On/Off"         , "Automatik speichern"    } },
+  { "Save WiFi"           , { "Save WiFi"           , "WLAN speichern"         } },
+  { "Save Time"           , { "Save Time"           , "Zeit speichern"         } },
+  { "Save NTP"            , { "Save NTP"            , "NTP speichern"          } },
                         
-  { "WiFi"                , { "WiFi"                , "WLAN"                } },
-  { "Hour"                , { "Hour"                , "Stunde"              } },
-  { "Minute"              , { "Minute"              , "Minute"              } },
-  { "Second"              , { "Second"              , "Sekunde"             } },
-  { "Time"                , { "Time"                , "Zeit"                } },
-  { "Timezone"            , { "Timezone"            , "Zeitzone"            } },
-  { "Daylight Saving Time", { "Daylight Saving Time", "Sommerzeit"          } },
-  { "Standard Time"       , { "Standard Time"       , "Normalzeit"          } },
-  { "Start"               , { "Start"               , "Start"               } },
-  { "End"                 , { "End"                 , "Ende"                } },
-  { "Month"               , { "Month"               , "Monat"               } },
-  { "Week"                , { "Week"                , "Woche"               } },
-  { "Day"                 , { "Day"                 , "Tag"                 } },
-  { "Hour"                , { "Hour"                , "Stunde"              } },
-  { "Offset to UTC (min)" , { "Offset to UTC (min)" , "Abstand zu UTC (Min)"} },
-  { "Enable"              , { "Enable"              , "Aktiv"               } },
-  { "Rules"               , { "Rules"               , "Regeln"              } },
-  { "Mon"                 , { "Mon"                 , "Mo"                  } },
-  { "Tue"                 , { "Tue"                 , "Di"                  } },
-  { "Wed"                 , { "Wed"                 , "Mi"                  } },
-  { "Thu"                 , { "Thu"                 , "Do"                  } },
-  { "Fri"                 , { "Fri"                 , "Fr"                  } },
-  { "Sat"                 , { "Sat"                 , "Sa"                  } },
-  { "Sun"                 , { "Sun"                 , "So"                  } },
-    
+  { "WiFi"                , { "WiFi"                , "WLAN"                   } },
+  { "Hour"                , { "Hour"                , "Stunde"                 } },
+  { "Minute"              , { "Minute"              , "Minute"                 } },
+  { "Second"              , { "Second"              , "Sekunde"                } },
+  { "Time"                , { "Time"                , "Zeit"                   } },
+  { "Timezone"            , { "Timezone"            , "Zeitzone"               } },
+  { "Daylight Saving Time", { "Daylight Saving Time", "Sommerzeit"             } },
+  { "Standard Time"       , { "Standard Time"       , "Normalzeit"             } },
+  { "Start"               , { "Start"               , "Start"                  } },
+  { "End"                 , { "End"                 , "Ende"                   } },
+  { "Month"               , { "Month"               , "Monat"                  } },
+  { "Week"                , { "Week"                , "Woche"                  } },
+  { "Day"                 , { "Day"                 , "Tag"                    } },
+  { "Hour"                , { "Hour"                , "Stunde"                 } },
+  { "Offset to UTC (min)" , { "Offset to UTC (min)" , "Abstand zu UTC (Min)"   } },
+  { "Enable"              , { "Enable"              , "Aktiv"                  } },
+  { "Action"              , { "Action"              , "Aktion"                 } },
+  { "Rules"               , { "Rules"               , "Regeln"                 } },
+  { "Mon"                 , { "Mon"                 , "Mo"                     } },
+  { "Tue"                 , { "Tue"                 , "Di"                     } },
+  { "Wed"                 , { "Wed"                 , "Mi"                     } },
+  { "Thu"                 , { "Thu"                 , "Do"                     } },
+  { "Fri"                 , { "Fri"                 , "Fr"                     } },
+  { "Sat"                 , { "Sat"                 , "Sa"                     } },
+  { "Sun"                 , { "Sun"                 , "So"                     } },
+} ;
+
+static const std::map<String, Translate> TranslateWord2
+{
+  { transOn       ._lang[0], transOn        },
+  { transOff      ._lang[0], transOff       },
+  
   { transJanuary  ._lang[0], transJanuary   },
   { transFebruary ._lang[0], transFebruary  },
   { transMarch    ._lang[0], transMarch     },
@@ -229,7 +240,6 @@ static const std::map<String, Translate> TranslateWord
   { transLast     ._lang[0], transLast      },
 } ;
 
-
 static const std::map<String,std::function<String()> > TranslateFunc
 {
   { "@Name"        , [](){ return settings._apSsid ; } },
@@ -250,13 +260,18 @@ static const std::map<String,std::function<String()> > TranslateFunc
   { "@StdOffset"   , [](){ return inputInt  ("tzStdOffset", settings._tzStdOffset, (int16_t)-840, (int16_t)840) ; } },
   { "@AutoNum"     , [](){ return inputInt  ("autoNum"    , settings._stateNum   , (uint8_t)   0, settings._stateMax) ; } },
   { "@AutoOnOff"   , autoOnOff },
+  { "@Source"      , [](){ return String("https://github.com/MuellerA/EspObiSocket") ; } },
 } ;
 
 String translate(const String &orig)
 {
-  auto iWord = TranslateWord.find(orig) ;
-  if (iWord != TranslateWord.end())
-    return iWord->second() ;
+  auto iWord1 = TranslateWord1.find(orig) ;
+  if (iWord1 != TranslateWord1.end())
+    return iWord1->second() ;
+
+  auto iWord2 = TranslateWord2.find(orig) ;
+  if (iWord2 != TranslateWord2.end())
+    return iWord2->second() ;
 
   auto iFunc = TranslateFunc.find(orig) ;
   if (iFunc != TranslateFunc.end())
@@ -378,14 +393,15 @@ const char HttpFooter_P[] PROGMEM =
 ////////////////////////////////////////////////////////////////////////////////
 
 const char HttpHome_P[] PROGMEM =
-  R"(<p style="font-size: small"><a href="/settings.html">%Settings%</a> <a href="/update">%Update%</a> <a href="/reboot">%Reboot%</a></p>
-<form action="/set" method="post">
-  <button class="button" type="submit" name="action" value="on">%On%</button>
-  <button class="button" type="submit" name="action" value="off">%Off%</button>
-  <button class="button" type="submit" name="action" value="time">%Time Controlled%</button>
+  R"(<form action="/set" method="post">
+  <button class="button" type="submit" name="action" value="on" style="font-size: 300%%">%On%</button>
+  <button class="button" type="submit" name="action" value="off" style="font-size: 300%%">%Off%</button>
+  <br/>
+  <button class="button" type="submit" name="action" value="time" style="font-size: 300%%">%Time Controlled%</button>
 </form>
 
 <p><span style="font-size: 66%%">%@NtpTime% - %#LastSync%</span></p>
+<p style="font-size: small"><a href="/settings.html">%Settings%</a> <a href="/reboot">%Reboot%</a></p>
 )" ;
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -500,7 +516,17 @@ const char HttpSettings_P[] PROGMEM =
     <input type="time" name="time" step="1" value="%@NtpTime%"/>
     <button type="submit" name="action" value="time">%Save Time%</button>
   </form>
-</div>)" ;
+</div>
+
+<!-- Update -->
+<div class="border">
+  <h2>%Update%</h2>
+  <ul>
+    <li><a href="%@Source%">%Source Code%</a></li>
+    <li><a href="/update">%Upload Firmware%</a></li>
+  </ul>
+</div>
+)" ;
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -547,6 +573,7 @@ void httpOnReboot()
   httpOk() ;
   httpTemplate_P(HttpReboot_P, translateReboot) ;
   httpServer.sendContent("") ;
+  delay(1000) ; // wait for response transmitted
   ESP.restart() ;
 }
 
@@ -751,8 +778,8 @@ String autoOnOff()
     s += "<select size=\"1\" name=\"autoSt" ;
     s += idx ;
     s += "\">" ;
-    s += inputOption("On" , state._state, Relay::State::On ) ;
-    s += inputOption("Off", state._state, Relay::State::Off) ;
+    s += inputOption(transOn() , state._state, Relay::State::On ) ;
+    s += inputOption(transOff(), state._state, Relay::State::Off) ;
     s += "</select>" ;
     s += "</td>" ;
     s += "</tr>" ;
@@ -786,6 +813,7 @@ void httpOnSettings()
       if ((3 <= ssid.length()) && (ssid.length() <= 32))
       {
         settings._apSsid = httpServer.arg("apSsid") ;
+        httpUpdater.updateCredentials(settings._apSsid, settings._apPsk) ;
         settingsDirty = true ;
       }
     }
