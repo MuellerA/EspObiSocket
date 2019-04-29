@@ -3,7 +3,7 @@
 <a href="images/gehaeuse.jpg"><img src="images/gehaeuse.jpg" alt="Gehaeuse" width="400px" align="right"/></a>
 
 <p>The WIFI Socket is sold by OBI for 9.99EUR (or two for 17.99EUR) in April 2019</p>
-<p>There are several other projects around which free the socket from Chinese servers and integrate it in a smart home environment or connect it to an MQTT server. If you want to do this you better look there.</br>This firmware provides only a simple web interface.</p>
+<p>This firmware provides a simple web interface to controll the WiFi Socket.<br/>There are several other projects around which also free the socket from Chinese servers and integrate it in a smart home environment or connect it to an MQTT server. If you want to do this you better look there.</p>
 
 <h2>The usual warnings</h2>
 <p><span style="color: red">DO NOT open the case unless you know what you are doing. 240V can kill you.<br/>
@@ -49,7 +49,7 @@ DO NOT expose  the socket to the internet. The socket stores your WiFi credentia
   <li>Install the required libraries</li>
   <li>Check the <a href="source/ArduinoSettings.png">Board Settings</a> in the Tools menu</li>
   <li>Modify the password.h file, the password is used in AP mode and as OTA update password</li>
-  <li>Load the Clock.ino sketch</li>
+  <li>Load the EspObiSocket.ino sketch</li>
   <li>Connect GPIO0 to GND and press the Reset button</li>
   <li>Flash the ESP8266 using Arduino IDE </li>
 </ol>
@@ -80,8 +80,8 @@ DO NOT expose  the socket to the internet. The socket stores your WiFi credentia
 
 <h2>LEDs</h2>
 <ul>
-  <li>Red ON: Socket has power</li>
   <li>Red OFF: Socket has no power</li>
+  <li>Red ON: Socket has power</li>
   <li>Green OFF: manual mode</li>
   <li>Green ON: Time Controlled mode</li>
   <li>Green blink: Time Controlled mode Error, e.g. no NTP server found</li>
