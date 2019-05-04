@@ -1,4 +1,4 @@
-<h1>Firmware for OBI's WIFI Socket Version 2 with ESP8266 WROOM-O2</h1>
+<h1>Firmware for OBI's WIFI Socket Version 2 with ESP8266 WROOM-02</h1>
 
 <a href="images/gehaeuse.jpg"><img src="images/gehaeuse.jpg" alt="Gehaeuse" width="400px" align="right"/></a>
 

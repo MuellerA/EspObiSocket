@@ -874,7 +874,7 @@ void httpOnSettings()
             state._daySecond = h*60*60 + m*60 + s ;
         }
 
-        state._state = (httpServer.arg(String("autoSt") + idx) == "On") ? Relay::State::On : Relay::State::Off ;
+        state._state = (httpServer.arg(transOn == String("autoSt") + idx)) ? Relay::State::On : Relay::State::Off ;
       }
       uint8_t numOld = settings._stateNum ;
       ascIntToBin(httpServer.arg("autoNum"), settings._stateNum, (uint8_t)0, settings._stateMax) ;
