@@ -877,8 +877,6 @@ void httpOnSettings()
         }
 
         String autoSt = httpServer.arg(String("autoSt") + idx) ;
-        Serial.println(idx) ;
-        Serial.println(autoSt) ;
         state._state = (transOn == autoSt) ? Relay::State::On : Relay::State::Off ;
       }
       uint8_t numOld = settings._stateNum ;
