@@ -164,11 +164,11 @@ Translate transLast      { "Last"     , "Letzter"   } ;
 
 Translate transOn        { "On"       , "Ein"       } ;
 Translate transOff       { "Off"      , "Aus"       } ;
+Translate transTime      { "Time Controlled", "Zeitgesteuert" } ;
 
 static const std::map<String, Translate> TranslateWord1
 {
   { "Switch On/Off"       , { "Switch On/Off"       , "Ein-/Ausschalten"       } },
-  { "Time Controlled"     , { "Time Controlled"     , "Zeitgesteuert"          } },
   { "Home"                , { "Home"                , "Startseite"             } },
   { "Settings"            , { "Settings"            , "Einstellungen"          } },
   { "Upload Firmware"     , { "Upload Firmware"     , "Firmware hochladen"     } },
@@ -178,10 +178,12 @@ static const std::map<String, Translate> TranslateWord1
   { "manual"              , { "manual"              , "manuell"                } },
   { "Save Name"           , { "Save Name"           , "Name speichern"         } },
   { "Save On/Off"         , { "Save On/Off"         , "Automatik speichern"    } },
+  { "Save Boot Mode"      , { "Save Boot Mode"      , "Startzustand speichern" } },
   { "Save WiFi"           , { "Save WiFi"           , "WLAN speichern"         } },
   { "Save Time"           , { "Save Time"           , "Zeit speichern"         } },
   { "Save NTP"            , { "Save NTP"            , "NTP speichern"          } },
-                        
+
+  { "Boot Mode"           , { "Boot Mode"           , "Startzustand"           } },
   { "WiFi"                , { "WiFi"                , "WLAN"                   } },
   { "Hour"                , { "Hour"                , "Stunde"                 } },
   { "Minute"              , { "Minute"              , "Minute"                 } },
@@ -213,6 +215,7 @@ static const std::map<String, Translate> TranslateWord2
 {
   { transOn       ._lang[0], transOn        },
   { transOff      ._lang[0], transOff       },
+  { transTime     ._lang[0], transTime      },
   
   { transJanuary  ._lang[0], transJanuary   },
   { transFebruary ._lang[0], transFebruary  },
@@ -261,6 +264,7 @@ static const std::map<String,std::function<String()> > TranslateFunc
   { "@StdHour"     , [](){ return inputInt  ("tzStdHour"  , settings._tzStdHour  , (uint8_t)   0, (uint8_t) 23) ; } },
   { "@StdOffset"   , [](){ return inputInt  ("tzStdOffset", settings._tzStdOffset, (int16_t)-840, (int16_t)840) ; } },
   { "@AutoNum"     , [](){ return inputInt  ("autoNum"    , settings._stateNum   , (uint8_t)   0, settings._stateMax) ; } },
+  { "@BootMode"    , [](){ return inputBootMode() ; } },
   { "@AutoOnOff"   , autoOnOff },
   { "@Source"      , [](){ return String("https://github.com/MuellerA/EspObiSocket") ; } },
 } ;
@@ -480,6 +484,11 @@ const char HttpSettings_P[] PROGMEM =
       %@AutoOnOff%
     </table>
     <button type="submit" name="action" value="auto">%Save On/Off%</button>
+  </form>
+  <hr/>
+  <form action="settings.html" method="post">
+    <p>%Boot Mode%: %@BootMode%</p>
+    <button type="submit" name="action" value="boot">%Save Boot Mode%</button>
   </form>
 </div>
 
@@ -713,6 +722,16 @@ String inputDay(const char *name, TZ::Day day)
     String("</select>") ;
 }
 
+String inputBootMode()
+{
+  return
+    String("<select name=\"boot\" size=\"1\">") +
+    inputOption(transOn()  , settings._bootMode, Settings::Mode::On  ) +
+    inputOption(transOff() , settings._bootMode, Settings::Mode::Off ) +
+    inputOption(transTime(), settings._bootMode, Settings::Mode::Time) +
+    String("</select>") ;
+}
+
 template<typename T>
 String inputInt(const char *name, T val, T min, T max)
 {
@@ -885,6 +904,14 @@ void httpOnSettings()
         settings._states[i]._enable = false ;
                   
       std::sort(settings._states, settings._states + settings._stateNum) ;
+      settingsDirty = true ;
+    }
+    else if (action == "boot")
+    {
+      String bootMode = httpServer.arg("boot") ;
+      if      (transOn   == bootMode) settings._bootMode = Settings::Mode::On   ;
+      else if (transTime == bootMode) settings._bootMode = Settings::Mode::Time ;
+      else                            settings._bootMode = Settings::Mode::Off  ;
       settingsDirty = true ;
     }
     else if (action == "wifi")

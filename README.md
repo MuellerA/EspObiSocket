@@ -68,7 +68,6 @@ DO NOT expose  the socket to the internet. The socket stores your WiFi credentia
 
 <h2>Usage of the WiFi Socket</h2>
 <ul>
-  <li>The WiFi Socket always starts in "Off" position.</li>
   <li>When switching to ON or OFF the "Time Controlled" mode is disabled.</li>
 </ul>
 

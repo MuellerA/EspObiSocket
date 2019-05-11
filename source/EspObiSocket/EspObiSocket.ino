@@ -284,6 +284,13 @@ void setup()
   
   settings.load() ;
   Serial.printf("AP: SSID=%s / PSK=%s / Channel=%d\n", settings._apSsid.c_str(), settings._apPsk.c_str(), settings._apChan) ;
+  settings._mode = settings._bootMode ;
+  switch (settings._mode)
+  {
+  case Settings::Mode::On:   relay.on()  ; break ;
+  case Settings::Mode::Time:               break ;
+  default:                   relay.off() ; break ;
+  }
 
   WifiSetup() ;
   HttpSetup() ;
@@ -319,7 +326,7 @@ void loop()
       digitalWrite(IoLedGreen, HIGH) ;
       last = now ;
 
-      if (ntp.inc() && (settings._mode == Settings::Mode::Time))
+      if (ntp.inc())
       {
         uint64_t local = ntp.local() ;
         update(local) ;

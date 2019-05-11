@@ -97,6 +97,7 @@ struct Settings
 
   Mode _mode { Mode::Off } ;
   static const uint8_t _stateMax { 20 } ;
+  Mode _bootMode { Mode::Off } ;
   uint8_t _stateNum { 0 } ;
   State _states[_stateMax] ;
 } ;

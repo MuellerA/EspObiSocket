@@ -85,6 +85,8 @@ void Settings::load()
       ascIntToBin(fileRead(cfg), state._daySecond) ;
       ascIntToBin(fileRead(cfg), tmp2) ; state._state = (Relay::State) tmp2 ;
     }
+
+    ascIntToBin(fileRead(cfg), tmp         ) ; _bootMode   = (Mode)     tmp ;
     
     // magic aendern!
 
@@ -145,7 +147,9 @@ void Settings::save() const
     cfg.println(         state._daySecond     ) ;
     cfg.println((uint8_t)state._state         ) ;
   }
-  
+
+  cfg.println((uint8_t)_bootMode) ;
+
   // magic aendern!
   
   cfg.close() ;
