@@ -117,6 +117,7 @@ struct Translate
 {
   String _lang[(unsigned int)Settings::Lang::Size] ;
   const String& operator()() const { return _lang[(unsigned int)settings._lang] ; }
+
   bool operator==(const String &cmp)
   {
     for (auto l : _lang)
@@ -131,6 +132,7 @@ struct Translate
         return true ;
     return false ;
   }
+
 } ;
 
 Translate transJanuary   { "January"  , "Januar"    } ;
@@ -874,7 +876,10 @@ void httpOnSettings()
             state._daySecond = h*60*60 + m*60 + s ;
         }
 
-        state._state = (httpServer.arg(transOn == String("autoSt") + idx)) ? Relay::State::On : Relay::State::Off ;
+        String autoSt = httpServer.arg(String("autoSt") + idx) ;
+        Serial.println(idx) ;
+        Serial.println(autoSt) ;
+        state._state = (transOn == autoSt) ? Relay::State::On : Relay::State::Off ;
       }
       uint8_t numOld = settings._stateNum ;
       ascIntToBin(httpServer.arg("autoNum"), settings._stateNum, (uint8_t)0, settings._stateMax) ;
